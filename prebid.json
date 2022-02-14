@@ -1,0 +1,14 @@
+[
+  "appnexusBidAdapter",
+  "pubmaticBidAdapter",
+  "rubiconBidAdapter",
+  "synacormediaBidAdapter",
+  "medianetBidAdapter",
+  "ixBidAdapter",
+  "amxBidAdapter",
+  "nobidBidAdapter",
+  "onetagBidAdapter",
+  "sonobiBidAdapter",
+  "yieldmoBidAdapter",
+  "schain"
+]

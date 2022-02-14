@@ -1,0 +1,31 @@
+{
+  "name": "videojsample",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "clean": "rm dist/bundle.js",
+    "build-dev": "webpack  --mode development",
+    "build-prod": "webpack --mode production",
+    "build-watch": "webpack -w --mode development"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.15.5",
+    "@babel/preset-env": "^7.15.6",
+    "babel-loader": "^8.2.2",
+    "uglifyjs-webpack-plugin": "^2.2.0",
+    "webpack": "^5.53.0",
+    "webpack-bundle-analyzer": "^4.4.2",
+    "webpack-cli": "^4.8.0"
+  },
+  "dependencies": {
+    "prebid.js": "^5.18.0",
+    "request-promise": "^4.2.6",
+    "video.js": "^7.13.3",
+    "videojs-contrib-ads": "^6.9.0",
+    "videojs-ima": "^1.11.0",
+    "videojs-playlist": "^5.0.0"
+  }
+}
