@@ -10,5 +10,6 @@
   "onetagBidAdapter",
   "sonobiBidAdapter",
   "yieldmoBidAdapter",
+  "instreamTracking",
   "schain"
 ]

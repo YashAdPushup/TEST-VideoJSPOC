@@ -12,7 +12,8 @@ import "prebid.js/modules/sonobiBidAdapter";
 import "prebid.js/modules/yieldmoBidAdapter";
 import "prebid.js/modules/dfpAdServerVideo";
 import "prebid.js/modules/schain";
-import config from "./config/toBeDeletedTestConfig";
+import "prebid.js/modules/instreamTracking";
+import config from "./config/config"; // to test use toBeDeletedTestConfig
 import { logDataToLoggerService } from "./helpers";
 
 var constants = {
@@ -30,6 +31,7 @@ var constants = {
     REFRESH_RATE: "refreshrate",
     FLUID: "fluid",
     INFLATED_CPM: "bidInf",
+    CONTEXT: "hb_ap_context",
   },
 };
 var adUnit1 = config.prebid;
@@ -67,6 +69,12 @@ function getBidderSettings() {
             return bidResponse.mediaType; // Current Ad Format
           },
         },
+        {
+          key: keys.CONTEXT,
+          val: function () {
+            return "instream";
+          },
+        },
       ],
     },
   };
@@ -100,29 +108,33 @@ export default function runAuction() {
           ],
         },
       },
+      instreamTracking: {
+        enabled: true,
+        urlPattern: /(prebid\.adnxs\.com\/pbc\/v1\/cache\.*)|(search\.spotxchange\.com\/ad\/vast\.html\?key=\.*)/,
+      },
     });
 
-    // pbjs.que.push(function () {
-    //   pbjs.onEvent("bidWon", function (e) {
-    //     var bids = e.bidsReceived || [];
-    //     if (bids.length) {
-    //       for (var i = 0; i < bids.length; i++) {
-    //         var modifiedBidData = {};
-    //         var allData = {};
-    //         modifiedBidData["adUnitCode"] = bids[i].adUnitCode;
-    //         modifiedBidData["bidder"] = bids[i].bidder;
-    //         modifiedBidData["adServerTargeting_cpm"] =
-    //           bids[i].adserverTargeting.hb_pb;
-    //         modifiedBidData["format"] = bids[i].mediaType;
-    //         modifiedBidData["cpm"] = bids[i].cpm;
-    //         allData["bidData"] = modifiedBidData;
-    //         allData["siteId"] = 42209;
+    pbjs.que.push(function () {
+      pbjs.onEvent("bidWon", function (e) {
+        var bids = e.bidsReceived || [];
+        if (bids.length) {
+          for (var i = 0; i < bids.length; i++) {
+            var modifiedBidData = {};
+            var allData = {};
+            modifiedBidData["adUnitCode"] = bids[i].adUnitCode;
+            modifiedBidData["bidder"] = bids[i].bidder;
+            modifiedBidData["adServerTargeting_cpm"] =
+              bids[i].adserverTargeting.hb_pb;
+            modifiedBidData["format"] = bids[i].mediaType;
+            modifiedBidData["cpm"] = bids[i].cpm;
+            allData["bidData"] = modifiedBidData;
+            allData["siteId"] = 42209;
 
-    //         logDataToLoggerService("winningVideoJsBids", allData);
-    //       }
-    //     }
-    //   });
-    // });
+            logDataToLoggerService("winningVideoJsBids", allData);
+          }
+        }
+      });
+    });
 
     pbjs.requestBids({
       bidsBackHandler: function (bids) {
@@ -132,6 +144,7 @@ export default function runAuction() {
             params: {
               iu: config.gamAdUnit,
               output: "vast",
+              ad_rule: 0,
             },
           });
           adtag = videoUrl;

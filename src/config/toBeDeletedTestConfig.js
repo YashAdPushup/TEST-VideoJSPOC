@@ -5,6 +5,7 @@ export default {
     code: "video1",
     mediaTypes: {
       video: {
+        context: "instream",
         playerSize: [640, 480],
         mimes: ["video/mp4"],
         protocols: [1, 2, 3, 4, 5, 6, 7, 8],
@@ -19,7 +20,6 @@ export default {
           placementId: 13232361,
           video: {
             frameworks: [1, 2],
-            context: "pre_roll",
           },
         },
       },
