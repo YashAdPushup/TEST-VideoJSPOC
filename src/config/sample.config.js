@@ -44,6 +44,7 @@ export default {
         params: {
           publisherId: "158261",
           adSlot: "4039517",
+
           video: {},
         },
       },
@@ -53,7 +54,22 @@ export default {
           accountId: 20616,
           siteId: 402082,
           zoneId: 2252332,
-          video: {},
+
+          video: {
+            mimes: [
+              "video/mp4",
+              "video/x-flv",
+              "video/x-ms-wmv",
+              "application/javascript",
+              "video/webm",
+            ],
+            playerHeight: "480",
+            playerWidth: "640",
+            protocols: [2, 3, 5, 6],
+            api: [1, 2],
+            linearity: 1,
+            maxduration: 200,
+          },
         },
       },
       {
@@ -101,6 +117,7 @@ export default {
         bidder: "sonobi",
         params: {
           placement_id: "870bcf6ef599eab60908",
+          video: {},
         },
       },
       {

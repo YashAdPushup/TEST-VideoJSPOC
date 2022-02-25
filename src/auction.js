@@ -145,8 +145,14 @@ export default function runAuction() {
               iu: config.gamAdUnit,
               output: "vast",
               ad_rule: 0,
+              description_url: window.location.href,
             },
           });
+
+          // pbjs.markWinningBidAsUsed({
+          //   adUnitCode: 22661273398, // optional if you know the adId
+          // });
+
           adtag = videoUrl;
 
           resolve(adtag);
