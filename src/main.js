@@ -10,16 +10,7 @@ const sampleVideos = [
   {
     sources: [
       {
-        src: "https://cdn.adpushup.com/instream/42209/content/demoVideo2.mp4",
-        type: "video/mp4",
-      },
-    ],
-    // poster: "https://cdn.adpushup.com/instream/42209/content/thumbnail3.png",
-  },
-  {
-    sources: [
-      {
-        src: "https://cdn.adpushup.com/instream/42209/content/demoVideo5.mp4",
+        src: "https://cdn.adpushup.com/instream/42209/content/journaldev1.mp4",
         type: "video/mp4",
       },
     ],
@@ -27,7 +18,16 @@ const sampleVideos = [
   {
     sources: [
       {
-        src: "https://cdn.adpushup.com/instream/42209/content/demoVideo.mp4",
+        src: "https://cdn.adpushup.com/instream/42209/content/journaldev2.mp4",
+        type: "video/mp4",
+      },
+    ],
+  },
+
+  {
+    sources: [
+      {
+        src: "https://cdn.adpushup.com/instream/42209/content/journaldev3.mp4",
         type: "video/mp4",
       },
     ],
@@ -35,14 +35,22 @@ const sampleVideos = [
   {
     sources: [
       {
-        src: "https://cdn.adpushup.com/instream/42209/content/demoVideo4.mp4",
+        src: "https://cdn.adpushup.com/instream/42209/content/journaldev4.mp4",
+        type: "video/mp4",
+      },
+    ],
+  },
+  {
+    sources: [
+      {
+        src: "https://cdn.adpushup.com/instream/42209/content/journaldev5.mp4",
         type: "video/mp4",
       },
     ],
   },
 ];
 
-var playingFirtTime = true;
+var playingFirstTime = true;
 
 function loadIma() {
   return new Promise((resolve, reject) => {
@@ -95,7 +103,7 @@ fetchVideoJsStyle()
     var player = videojs(`#${config.videoPlayerId}`, videoOptions);
 
     player.playlist(sampleVideos);
-    player.currentTime(9); // starting from 9 secs
+    player.currentTime(5); // starting from 5 secs
     // Play through the playlist automatically.
     player.playlist.autoadvance(0);
     player.playlist.repeat(true);
@@ -179,8 +187,8 @@ fetchVideoJsStyle()
         };
 
         try {
-          if (playingFirtTime) {
-            playingFirtTime = false;
+          if (playingFirstTime) {
+            playingFirstTime = false;
             player.ima(imaOptions);
           } else {
             player.ima.changeAdTag(imaOptions.adTagUrl);
