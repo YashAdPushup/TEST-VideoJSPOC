@@ -91,6 +91,7 @@ export default function runAuction() {
     pbjs.setConfig({
       cache: {
         url: "https://prebid.adnxs.com/pbc/v1/cache",
+        ignoreBidderCacheKey: true,
       },
       priceGranularity: "dense",
       schain: {
@@ -146,6 +147,7 @@ export default function runAuction() {
               output: "vast",
               ad_rule: 0,
               description_url: window.location.href,
+              sz: "1x1|400x300|640x480|375x251",
             },
           });
 
