@@ -147,13 +147,9 @@ export default function runAuction() {
               output: "vast",
               ad_rule: 0,
               description_url: window.location.href,
-              sz: "1x1|400x300|640x480|375x251",
+              sz: "1x1|400x300|640x480|375x251"
             },
           });
-
-          // pbjs.markWinningBidAsUsed({
-          //   adUnitCode: 22661273398, // optional if you know the adId
-          // });
 
           adtag = videoUrl;
 

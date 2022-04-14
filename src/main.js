@@ -51,6 +51,7 @@ const sampleVideos = [
 ];
 
 var playingFirstTime = true;
+var shouldPlayVideo = false;
 
 function loadIma() {
   return new Promise((resolve, reject) => {
@@ -69,7 +70,7 @@ function fetchVideoJsStyle() {
     link.rel = "stylesheet";
     link.onload = function () {
       resolve();
-      console.log("style has loaded");
+      // console.log("style has loaded");
     };
     link.href = "https://vjs.zencdn.net/7.11.4/video-js.css";
 
@@ -91,6 +92,134 @@ function isOutOfViewport(element) {
   return outOfView;
 }
 
+function buildNewRequest(player, url) {
+    var imaOptions = {
+      adTagUrl: url,
+    };
+    player.ima.changeAdTag(imaOptions.adTagUrl);
+    player.ima.requestAds();
+}
+
+function handlePlayList(player) {
+    player.playlist(sampleVideos);
+    player.playlist.autoadvance(0);
+    player.playlist.repeat(true);
+}
+
+function addCssAndHandlePictureInPicture(player) {
+    var span_obj = document.createElement("span");
+      span_obj.innerHTML = "x";
+      span_obj.setAttribute("id", "close");
+
+      document.getElementById("ap-player").appendChild(span_obj);
+      document.getElementById("close").style.cssText = `
+        display:none;
+        padding:6px 10px;
+        position: absolute;
+        font-size: 25px;
+        right :5px;
+        top:5px;
+        cursor :pointer;
+    `;
+
+      var pipElemet = null;
+      var videoWatched = 0;
+      var elementViewed = 0;
+
+      document.addEventListener("scroll", function () {
+        var elem = document.querySelector("#video-container");
+        var outOfView = isOutOfViewport(elem);
+        if (!outOfView) elementViewed++;
+
+        if (outOfView && !pipElemet && videoWatched === 0 && elementViewed > 0) {
+          pipElemet = true;
+          document.getElementById("ap-player").style.cssText = `
+                position: fixed;
+                bottom: 0;
+                right: 0;
+                height: 180px;
+                width: 320px;
+                z-index:1;
+        `;
+          document.getElementById("close").style.display = "block";
+        } else if (pipElemet && !outOfView) {
+          videoWatched = 0;
+          pipElemet = null;
+          document.getElementById("ap-player").style.cssText = `
+          position: relative;
+          height: 360px;
+          width: 640px;
+  `;
+          document.getElementById("close").style.display = "none";
+        }
+      });
+
+      document.getElementById("close").addEventListener("click", function () {
+        if (player.isFullscreen()) {
+          return player.exitFullscreen();
+        }
+
+        videoWatched++;
+        pipElemet = null;
+        document.getElementById("ap-player").style.cssText = `
+        position: relative;
+        height: 360px;
+        width: 640px;
+  `;
+        document.getElementById("close").style.display = "none";
+        player.pause();
+        shouldPlayVideo = false;
+      });
+
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+          if (player.paused()) {
+            return;
+          }
+          if(player.ads.inAdBreak()) {
+            // console.log("In ad break!!!");
+            setTimeout(function(){
+              if(document.hidden) {
+                player.pause();
+              }
+            }, 2500)
+          }
+          player.pause();
+        } else {
+            var elem = document.getElementById("ap-player");
+            var outOfView = isOutOfViewport(elem);
+            if (!outOfView) {
+              if (player.paused() && shouldPlayVideo) {
+                player.play();
+              }
+              return;
+            }
+            player.pause();
+        }
+      });
+}
+
+
+function handleAdsInPlayList() {
+  var player = videojs(`#${config.videoPlayerId}`);
+  var isFirstPlayerEnded = true;
+  player.on("ended", function() { 
+    if(isFirstPlayerEnded) {
+      isFirstPlayerEnded = false;
+      runAuction().then((adTag) => {
+        buildNewRequest(player, adTag);
+      } )
+    }
+    setTimeout(function(){
+      player.trigger("ad-requested");
+    }, 100)
+  });
+
+  player.on("ad-requested", function() {
+    isFirstPlayerEnded = true;
+  })
+}
+
 fetchVideoJsStyle()
   .then(loadIma)
   .then(() => {
@@ -99,91 +228,13 @@ fetchVideoJsStyle()
         pictureInPictureToggle: false,
       },
     };
+    
+    function invokeVideoPlayer(url) {
 
     var player = videojs(`#${config.videoPlayerId}`, videoOptions);
-
-    player.playlist(sampleVideos);
-    player.currentTime(5); // starting from 5 secs
-    // Play through the playlist automatically.
-    player.playlist.autoadvance(0);
-    player.playlist.repeat(true);
-
-    //hack for journaldev because autoplay isn't working properly
-    document.getElementById("page").addEventListener(
-      "click",
-      function () {
-        player.play();
-      },
-      { once: true }
-    );
-
-    var span_obj = document.createElement("span");
-    span_obj.innerHTML = "x";
-    span_obj.setAttribute("id", "close");
-
-    document.getElementById("ap-player").appendChild(span_obj);
-    document.getElementById("close").style.cssText = `
-      display:none;
-      padding:6px 10px;
-      position: absolute;
-      font-size: 25px;
-      right :5px;
-      top:5px;
-      cursor :pointer;
-  `;
-
-    var pipElemet = null;
-    var videoWatched = 0;
-    var elementViewed = 0;
-
-    document.addEventListener("scroll", function () {
-      var elem = document.querySelector("#video-container");
-      var outOfView = isOutOfViewport(elem);
-      if (!outOfView) elementViewed++;
-
-      if (outOfView && !pipElemet && videoWatched === 0 && elementViewed > 0) {
-        pipElemet = true;
-        document.getElementById("ap-player").style.cssText = `
-              position: fixed;
-              bottom: 0;
-              right: 0;
-              height: 180px;
-              width: 320px;
-              z-index:1;
-      `;
-        document.getElementById("close").style.display = "block";
-      } else if (pipElemet && !outOfView) {
-        videoWatched = 0;
-        pipElemet = null;
-        document.getElementById("ap-player").style.cssText = `
-        position: relative;
-        height: 360px;
-        width: 640px;
-`;
-        document.getElementById("close").style.display = "none";
-      }
-    });
-
-    document.getElementById("close").addEventListener("click", function () {
-      if (player.isFullscreen()) {
-        return player.exitFullscreen();
-      }
-
-      videoWatched++;
-      pipElemet = null;
-      document.getElementById("ap-player").style.cssText = `
-      position: relative;
-      height: 360px;
-      width: 640px;
-`;
-      document.getElementById("close").style.display = "none";
-      player.pause();
-    });
-
-    player.on("ended", function () {
-      runAuction().then((adTag) => {
-        var imaOptions = {
-          adTagUrl: adTag,
+    player.ready(function() {
+      var imaOptions = {
+          adTagUrl: url,
         };
 
         try {
@@ -199,10 +250,49 @@ fetchVideoJsStyle()
           console.log(err);
           logDataToLoggerService("errorInSendingAdRequest", { err });
         }
-      });
-    });
+      this.muted(true);
+      player.on("adsready", function() {
+        shouldPlayVideo = true;
+        this.play();
+      })
+    })
+
+    handlePlayList(player);
+
+    addCssAndHandlePictureInPicture(player);
+
+    handleAdsInPlayList(player);
+
+  };
+
+  runAuction().then((adTag) => {
+    invokeVideoPlayer(adTag);
   })
-  .catch((err) => {
-    console.log(err);
-    logDataToLoggerService("errorInMain", { err });
+
+  //   player.on("ended", function () {
+  //     runAuction().then((adTag) => {
+  //       var imaOptions = {
+  //         adTagUrl: adTag,
+  //       };
+
+  //       try {
+  //         if (playingFirstTime) {
+  //           playingFirstTime = false;
+  //           player.trigger("loadstart");
+  //           player.ima(imaOptions);
+  //         } else {
+  //           player.ima.changeAdTag(imaOptions.adTagUrl);
+  //           player.ima.requestAds();
+  //         }
+  //         logDataToLoggerService("videoJsSentAdRequest", imaOptions);
+  //       } catch (err) {
+  //         console.log(err);
+  //         logDataToLoggerService("errorInSendingAdRequest", { err });
+  //       }
+  //     });
+  //   });
+  // })
+  // .catch((err) => {
+  //   console.log(err);
+  //   logDataToLoggerService("errorInMain", { err });
   });
