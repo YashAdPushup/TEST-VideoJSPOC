@@ -144,12 +144,23 @@ export default function runAuction() {
             adUnit: adUnit1,
             params: {
               iu: config.gamAdUnit,
-              output: "vast",
+              output: "xml_vast4",
               ad_rule: 0,
               description_url: window.location.href,
-              sz: "1x1|400x300|640x480|375x251"
+              sz: "400x300|640x480|375x251",
+              cust_params: { instream_variation: "mainhb1804" },
+              impl: "s",
+              vad_type: "linear",
+              min_ad_duration: 0,
+              max_ad_duration: 30000
             },
           });
+
+
+          //   pbjs.markWinningBidAsUsed({
+          //     adUnitCode: adUnit1.code, // optional if you know the adId
+          //     adId: bid.adId // optional
+          // });
 
           adtag = videoUrl;
 

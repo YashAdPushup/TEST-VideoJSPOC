@@ -52,6 +52,7 @@ const sampleVideos = [
 
 var playingFirstTime = true;
 var shouldPlayVideo = false;
+var hasPlayListAdded = false;
 
 function loadIma() {
   return new Promise((resolve, reject) => {
@@ -174,6 +175,7 @@ function addCssAndHandlePictureInPicture(player) {
       document.addEventListener('visibilitychange', function () {
         if (document.hidden) {
           if (player.paused()) {
+            shouldPlayVideo = false;
             return;
           }
           if(player.ads.inAdBreak()) {
@@ -182,9 +184,10 @@ function addCssAndHandlePictureInPicture(player) {
               if(document.hidden) {
                 player.pause();
               }
-            }, 2500)
+            }, 25000)
           }
           player.pause();
+          shouldPlayVideo = true;
         } else {
             var elem = document.getElementById("ap-player");
             var outOfView = isOutOfViewport(elem);
@@ -212,7 +215,7 @@ function handleAdsInPlayList() {
     }
     setTimeout(function(){
       player.trigger("ad-requested");
-    }, 100)
+    }, 7000)
   });
 
   player.on("ad-requested", function() {
@@ -251,10 +254,17 @@ fetchVideoJsStyle()
           logDataToLoggerService("errorInSendingAdRequest", { err });
         }
       this.muted(true);
-      player.on("adsready", function() {
+      player.on("adsready", function(e) {
+        if(hasPlayListAdded) {
+          return;
+        }
         shouldPlayVideo = true;
         this.play();
+        hasPlayListAdded = true;
       })
+      // player.on("ads-manager", function(res){
+      //   console.log(res.adsManager);
+      // })
     })
 
     handlePlayList(player);
@@ -265,8 +275,16 @@ fetchVideoJsStyle()
 
   };
 
-  runAuction().then((adTag) => {
-    invokeVideoPlayer(adTag);
+  var playerElem = document.getElementById("ap-player");
+
+  document.addEventListener("scroll", function initPlayer(){
+    var playerOutOfView = isOutOfViewport(playerElem);
+    if(!playerOutOfView) {
+      runAuction().then((adTag) => {
+        invokeVideoPlayer(adTag);
+      })
+      document.removeEventListener("scroll", initPlayer);
+    }
   })
 
   //   player.on("ended", function () {
