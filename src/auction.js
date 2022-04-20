@@ -38,6 +38,12 @@ var adUnit1 = config.prebid;
 
 pbjs.addAdUnits(adUnit1);
 
+var allAdUnits = config.gamAdUnits;
+
+function getGamAdUnit() {
+  return allAdUnits[Math.floor(Math.random()*allAdUnits.length)];
+}
+
 function getBidderSettings() {
   var keys = constants.ADSERVER_TARGETING_KEYS;
 
@@ -143,16 +149,19 @@ export default function runAuction() {
           var videoUrl = pbjs.adServers.dfp.buildVideoUrl({
             adUnit: adUnit1,
             params: {
-              iu: config.gamAdUnit,
+              iu: getGamAdUnit(),
               output: "xml_vast4",
               ad_rule: 0,
-              description_url: window.location.href,
+              description_url: window.location.origin,
               sz: "400x300|640x480|375x251",
               cust_params: { instream_variation: "mainhb1804" },
               impl: "s",
               vad_type: "linear",
-              min_ad_duration: 0,
-              max_ad_duration: 30000
+              vpos: "preroll",
+              max_ad_duration: 30000,
+              nofb: 1,
+              ad_type: "video",
+              video_url_to_fetch: window.location.origin + window.location.pathname,
             },
           });
 

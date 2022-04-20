@@ -53,6 +53,13 @@ const sampleVideos = [
 var playingFirstTime = true;
 var shouldPlayVideo = false;
 var hasPlayListAdded = false;
+var gotResponseFromGam = false;
+var refreshInterval = 5000;
+var requestInterval;
+var shouldRequestAd = true;
+
+var videoContainerDiv = document.querySelector("#videoAdSlot");
+// videoContainerDiv.style.display = "none";
 
 function loadIma() {
   return new Promise((resolve, reject) => {
@@ -96,9 +103,14 @@ function isOutOfViewport(element) {
 function buildNewRequest(player, url) {
     var imaOptions = {
       adTagUrl: url,
+      vastLoadTimeout: 15000
     };
-    player.ima.changeAdTag(imaOptions.adTagUrl);
-    player.ima.requestAds();
+    if(playingFirstTime) {
+      player.ima(imaOptions);
+    } else {
+      player.ima.changeAdTag(imaOptions.adTagUrl);
+      player.ima.requestAds();
+    }
 }
 
 function handlePlayList(player) {
@@ -170,12 +182,14 @@ function addCssAndHandlePictureInPicture(player) {
         document.getElementById("close").style.display = "none";
         player.pause();
         shouldPlayVideo = false;
+        shouldRequestAd = false;
       });
 
       document.addEventListener('visibilitychange', function () {
         if (document.hidden) {
           if (player.paused()) {
             shouldPlayVideo = false;
+            shouldRequestAd = false;
             return;
           }
           if(player.ads.inAdBreak()) {
@@ -188,12 +202,16 @@ function addCssAndHandlePictureInPicture(player) {
           }
           player.pause();
           shouldPlayVideo = true;
+          shouldRequestAd = true;
         } else {
             var elem = document.getElementById("ap-player");
             var outOfView = isOutOfViewport(elem);
             if (!outOfView) {
               if (player.paused() && shouldPlayVideo) {
                 player.play();
+              }
+              if(playingFirstTime) {
+                shouldRequestAd = true;
               }
               return;
             }
@@ -206,7 +224,9 @@ function addCssAndHandlePictureInPicture(player) {
 function handleAdsInPlayList() {
   var player = videojs(`#${config.videoPlayerId}`);
   var isFirstPlayerEnded = true;
-  player.on("ended", function() { 
+  player.on("ended", function() {
+    gotResponseFromGam = false;
+    clearInterval(requestInterval); 
     if(isFirstPlayerEnded) {
       isFirstPlayerEnded = false;
       runAuction().then((adTag) => {
@@ -215,12 +235,33 @@ function handleAdsInPlayList() {
     }
     setTimeout(function(){
       player.trigger("ad-requested");
-    }, 7000)
+      if (!gotResponseFromGam) {
+        sendRequestsUntilResponse(player);
+      }
+    }, 5000)
   });
 
   player.on("ad-requested", function() {
     isFirstPlayerEnded = true;
   })
+}
+
+function sendRequestsUntilResponse(player) {
+  if(playingFirstTime) {
+    refreshInterval = 8000;
+  }
+  requestInterval = setInterval(function(){
+    if(gotResponseFromGam) {
+      clearInterval(requestInterval);
+      return;
+    }
+    if((player.paused() && !playingFirstTime) || !shouldRequestAd) {
+      return;
+    }
+    runAuction().then((adTag) => {
+      buildNewRequest(player, adTag);
+    } )
+  }, refreshInterval)
 }
 
 fetchVideoJsStyle()
@@ -238,11 +279,12 @@ fetchVideoJsStyle()
     player.ready(function() {
       var imaOptions = {
           adTagUrl: url,
+          vastLoadTimeout: 15000
         };
 
         try {
           if (playingFirstTime) {
-            playingFirstTime = false;
+            videoContainerDiv.style.display = "block";
             player.ima(imaOptions);
           } else {
             player.ima.changeAdTag(imaOptions.adTagUrl);
@@ -255,13 +297,25 @@ fetchVideoJsStyle()
         }
       this.muted(true);
       player.on("adsready", function(e) {
+        gotResponseFromGam = true;
         if(hasPlayListAdded) {
           return;
         }
         shouldPlayVideo = true;
+        playingFirstTime = false;
+        refreshInterval = 5000;
         this.play();
         hasPlayListAdded = true;
       })
+
+
+      setTimeout(function(){
+        if(gotResponseFromGam) {
+          return;
+        }
+        sendRequestsUntilResponse(player);
+      }, 5000)
+
       // player.on("ads-manager", function(res){
       //   console.log(res.adsManager);
       // })
