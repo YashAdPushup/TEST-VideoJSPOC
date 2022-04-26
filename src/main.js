@@ -52,14 +52,22 @@ const sampleVideos = [
 
 var playingFirstTime = true;
 var shouldPlayVideo = false;
-var hasPlayListAdded = false;
+var hasPlaylistStarted = false;
 var gotResponseFromGam = false;
-var refreshInterval = 5000;
+var refreshInterval = 7000;
 var requestInterval;
 var shouldRequestAd = true;
+var maxAdRequests = 17;
+var isFirstPlayerEnded = true;
+
+var videoOptions = {
+  controlBar: {
+    pictureInPictureToggle: false,
+  },
+};
 
 var videoContainerDiv = document.querySelector("#videoAdSlot");
-// videoContainerDiv.style.display = "none";
+var player = videojs(`#${config.videoPlayerId}`, videoOptions);
 
 function loadIma() {
   return new Promise((resolve, reject) => {
@@ -78,7 +86,6 @@ function fetchVideoJsStyle() {
     link.rel = "stylesheet";
     link.onload = function () {
       resolve();
-      // console.log("style has loaded");
     };
     link.href = "https://vjs.zencdn.net/7.11.4/video-js.css";
 
@@ -103,14 +110,13 @@ function isOutOfViewport(element) {
 function buildNewRequest(player, url) {
     var imaOptions = {
       adTagUrl: url,
-      vastLoadTimeout: 15000
+      vastLoadTimeout: 15000,
+      autoPlayAdBreaks : false,
+      muted: true
     };
-    if(playingFirstTime) {
-      player.ima(imaOptions);
-    } else {
+
       player.ima.changeAdTag(imaOptions.adTagUrl);
       player.ima.requestAds();
-    }
 }
 
 function handlePlayList(player) {
@@ -193,7 +199,6 @@ function addCssAndHandlePictureInPicture(player) {
             return;
           }
           if(player.ads.inAdBreak()) {
-            // console.log("In ad break!!!");
             setTimeout(function(){
               if(document.hidden) {
                 player.pause();
@@ -202,15 +207,16 @@ function addCssAndHandlePictureInPicture(player) {
           }
           player.pause();
           shouldPlayVideo = true;
-          shouldRequestAd = true;
+          shouldRequestAd = false;
         } else {
             var elem = document.getElementById("ap-player");
             var outOfView = isOutOfViewport(elem);
             if (!outOfView) {
               if (player.paused() && shouldPlayVideo) {
+                shouldRequestAd = true;
                 player.play();
               }
-              if(playingFirstTime) {
+              if(playingFirstTime || shouldPlayVideo) {
                 shouldRequestAd = true;
               }
               return;
@@ -223,22 +229,25 @@ function addCssAndHandlePictureInPicture(player) {
 
 function handleAdsInPlayList() {
   var player = videojs(`#${config.videoPlayerId}`);
-  var isFirstPlayerEnded = true;
   player.on("ended", function() {
-    gotResponseFromGam = false;
-    clearInterval(requestInterval); 
+    clearInterval(requestInterval);
+    if(!shouldRequestAd) {
+      player.pause();
+      return;
+    } 
     if(isFirstPlayerEnded) {
       isFirstPlayerEnded = false;
+      gotResponseFromGam = false;
       runAuction().then((adTag) => {
         buildNewRequest(player, adTag);
       } )
+      setTimeout(function(){
+        player.trigger("ad-requested");
+        if (!gotResponseFromGam) {
+          sendRequestsUntilResponse(player);
+        }
+      }, 7000)
     }
-    setTimeout(function(){
-      player.trigger("ad-requested");
-      if (!gotResponseFromGam) {
-        sendRequestsUntilResponse(player);
-      }
-    }, 5000)
   });
 
   player.on("ad-requested", function() {
@@ -247,19 +256,18 @@ function handleAdsInPlayList() {
 }
 
 function sendRequestsUntilResponse(player) {
-  if(playingFirstTime) {
-    refreshInterval = 8000;
-  }
+  var adBreakTotalRequests = 0;
   requestInterval = setInterval(function(){
     if(gotResponseFromGam) {
       clearInterval(requestInterval);
       return;
     }
-    if((player.paused() && !playingFirstTime) || !shouldRequestAd) {
+    if((player.paused() && !playingFirstTime) || !shouldRequestAd || (adBreakTotalRequests >= maxAdRequests)) {
       return;
     }
     runAuction().then((adTag) => {
       buildNewRequest(player, adTag);
+      adBreakTotalRequests++;
     } )
   }, refreshInterval)
 }
@@ -267,23 +275,21 @@ function sendRequestsUntilResponse(player) {
 fetchVideoJsStyle()
   .then(loadIma)
   .then(() => {
-    var videoOptions = {
-      controlBar: {
-        pictureInPictureToggle: false,
-      },
-    };
     
     function invokeVideoPlayer(url) {
 
-    var player = videojs(`#${config.videoPlayerId}`, videoOptions);
+    // var player = videojs(`#${config.videoPlayerId}`, videoOptions);
     player.ready(function() {
       var imaOptions = {
           adTagUrl: url,
-          vastLoadTimeout: 15000
+          vastLoadTimeout: 15000,
+          autoPlayAdBreaks : false,
+          muted: true
         };
 
         try {
           if (playingFirstTime) {
+            // playingFirstTime = false;
             videoContainerDiv.style.display = "block";
             player.ima(imaOptions);
           } else {
@@ -298,14 +304,26 @@ fetchVideoJsStyle()
       this.muted(true);
       player.on("adsready", function(e) {
         gotResponseFromGam = true;
-        if(hasPlayListAdded) {
+        logDataToLoggerService("response_for_instream", {count: 1});
+        player.trigger("readyforpreroll");
+
+        isFirstPlayerEnded = false;
+        
+        player.ima.playAdBreak();
+        player.muted(true);
+
+        setTimeout(function(){
+          isFirstPlayerEnded = true;
+        }, 3000)
+        if(hasPlaylistStarted) {
           return;
         }
         shouldPlayVideo = true;
         playingFirstTime = false;
         refreshInterval = 5000;
+        maxAdRequests = 2;
         this.play();
-        hasPlayListAdded = true;
+        hasPlaylistStarted = true;
       })
 
 
@@ -313,23 +331,20 @@ fetchVideoJsStyle()
         if(gotResponseFromGam) {
           return;
         }
+        player.trigger("loadstart");
         sendRequestsUntilResponse(player);
       }, 5000)
-
-      // player.on("ads-manager", function(res){
-      //   console.log(res.adsManager);
-      // })
     })
 
     handlePlayList(player);
-
-    addCssAndHandlePictureInPicture(player);
 
     handleAdsInPlayList(player);
 
   };
 
   var playerElem = document.getElementById("ap-player");
+
+  addCssAndHandlePictureInPicture(player);
 
   document.addEventListener("scroll", function initPlayer(){
     var playerOutOfView = isOutOfViewport(playerElem);
@@ -340,31 +355,4 @@ fetchVideoJsStyle()
       document.removeEventListener("scroll", initPlayer);
     }
   })
-
-  //   player.on("ended", function () {
-  //     runAuction().then((adTag) => {
-  //       var imaOptions = {
-  //         adTagUrl: adTag,
-  //       };
-
-  //       try {
-  //         if (playingFirstTime) {
-  //           playingFirstTime = false;
-  //           player.trigger("loadstart");
-  //           player.ima(imaOptions);
-  //         } else {
-  //           player.ima.changeAdTag(imaOptions.adTagUrl);
-  //           player.ima.requestAds();
-  //         }
-  //         logDataToLoggerService("videoJsSentAdRequest", imaOptions);
-  //       } catch (err) {
-  //         console.log(err);
-  //         logDataToLoggerService("errorInSendingAdRequest", { err });
-  //       }
-  //     });
-  //   });
-  // })
-  // .catch((err) => {
-  //   console.log(err);
-  //   logDataToLoggerService("errorInMain", { err });
-  });
+});

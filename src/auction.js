@@ -154,7 +154,7 @@ export default function runAuction() {
               ad_rule: 0,
               description_url: window.location.origin,
               sz: "400x300|640x480|375x251",
-              cust_params: { instream_variation: "mainhb1804" },
+              cust_params: { instream_variation: "mainhb2104" },
               impl: "s",
               vad_type: "linear",
               vpos: "preroll",
@@ -164,12 +164,6 @@ export default function runAuction() {
               video_url_to_fetch: window.location.origin + window.location.pathname,
             },
           });
-
-
-          //   pbjs.markWinningBidAsUsed({
-          //     adUnitCode: adUnit1.code, // optional if you know the adId
-          //     adId: bid.adId // optional
-          // });
 
           adtag = videoUrl;
 
